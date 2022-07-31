@@ -1,13 +1,21 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+
+
 use ink_lang as ink;
+use flipper::{flipper};
+
 
 #[ink::contract]
 mod erc20 {
+    
+
     use ink_storage::{
         traits::SpreadAllocate,
         Mapping,
     };
+
+    // use super::*;
 
     #[ink(event)]
         pub struct Transfer {
@@ -48,6 +56,8 @@ mod erc20 {
     InsufficientBalance,
     //Error declaration to return an error if the transfer request exceeds the account allowance
     InsufficientAllowance,
+    //No Tokens to claim
+    NoTokensClaimable,
     }
 
     /// Specify the ERC-20 result type.
@@ -57,6 +67,8 @@ mod erc20 {
         #[ink(constructor)]
         pub fn new(initial_supply: Balance) -> Self {
             // Initialize mapping for the contract.
+            let flipper1 = flipper::Flipper{value:true}; //library -> module -> function/class
+            let value = flipper1.get();
             ink_lang::utils::initialize_contract(|contract| {
                 Self::new_init(contract, initial_supply)
             })
@@ -124,14 +136,14 @@ mod erc20 {
         // up to a maximum value
         #[ink(message)]
         pub fn approve(&mut self, spender: AccountId, value: Balance) -> Result<()> {
-        let owner = self.env().caller();
-        self.allowances.insert((&owner, &spender), &value);
-        self.env().emit_event(Approval {
-            owner,
-            spender,
-            value,
-        });
-        Ok(())
+            let owner = self.env().caller();
+            self.allowances.insert((&owner, &spender), &value);
+            self.env().emit_event(Approval {
+                owner,
+                spender,
+                value,
+            });
+            Ok(())
         }
 
         //Allowance() function to return the number of tokens 
@@ -167,6 +179,24 @@ mod erc20 {
                 .insert((&from, &caller), &(allowance - value));
             Ok(())
             }
+
+
+        //Queries if tokens are available
+        #[ink(message)]
+        pub fn Available(&self, owner: AccountId) -> AvailableTokens {
+        vault::getTokens(&owner);
+        }
+
+        //ClaimsTokens if tokens are available
+        #[ink(message)]
+        pub fn ClaimTokens(&mut self, to: AccountId) -> Result<()> {
+        let caller = self.env().caller();
+        let token = self.Available(&AccountId);
+        if allowance < value {
+            self.transfer_from_to(&vault, &caller, token);
+        }
+        else {return Err(Error::NoTokensClaimable)}
+        }
            
     }
 
